@@ -29,3 +29,5 @@ dist-ssr
 # Firebase Emulator
 *-debug.log
 *-debug.log.*
+
+.firebase/
