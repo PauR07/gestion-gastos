@@ -2,11 +2,11 @@
 
 Aplicación web para gestionar y repartir gastos entre los participantes de un proyecto.
 
-Proyecto desarrollado para la unidad DA02 del módulo Desarrollo en la Nube del ciclo formativo de Desarrollo de Aplicaciones Web (DAW).
+Proyecto desarrollado para la unidad DAN02 del módulo Desarrollo en la Nube del ciclo formativo de Desarrollo de Aplicaciones Web (DAW).
 
 ## Aplicación desplegada
 
-[Acceder a Gestión de gastos](https://gestion-gastos-e1c76.web.app)
+[Acceder a Gestión de gastos](https://gestion-gastos-e1c76.web.app/)
 
 ## Funcionalidades
 
@@ -102,7 +102,7 @@ npm run lint
 
 ## Pruebas de seguridad
 
-Para ejecutar los emuladores es necesario disponer de Java 21.
+Para ejecutar los emuladores es necesario disponer de Java 21 o una versión compatible posterior.
 
 Iniciar los emuladores de Firebase:
 
