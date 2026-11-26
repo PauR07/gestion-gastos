@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthProvider";
 import RutaProtegida from "./components/RutaProtegida";
 
 import Login from "./pages/Login";
@@ -13,16 +13,12 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Rutas públicas */}
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
 
-          {/* Rutas protegidas */}
           <Route element={<RutaProtegida />}>
             <Route path="/" element={<Proyectos />} />
-
             <Route path="/proyectos/nuevo" element={<NuevoProyecto />} />
-
             <Route path="/proyectos/:id" element={<DetalleProyecto />} />
           </Route>
         </Routes>
