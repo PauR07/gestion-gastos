@@ -4,6 +4,10 @@ Aplicación web para gestionar y repartir gastos entre los participantes de un p
 
 Proyecto desarrollado para la unidad DA02 del módulo Desarrollo en la Nube del ciclo formativo de Desarrollo de Aplicaciones Web (DAW).
 
+## Aplicación desplegada
+
+[Acceder a Gestión de gastos](https://gestion-gastos-e1c76.web.app)
+
 ## Funcionalidades
 
 - Registro e inicio de sesión de usuarios.
@@ -27,6 +31,7 @@ Proyecto desarrollado para la unidad DA02 del módulo Desarrollo en la Nube del 
 - Firebase Authentication
 - Cloud Firestore
 - Firebase Emulator Suite
+- Firebase Hosting
 - ESLint
 - Git y GitHub
 
@@ -51,6 +56,7 @@ Crear un proyecto en Firebase y habilitar los siguientes servicios:
 
 - Firebase Authentication con correo electrónico y contraseña.
 - Cloud Firestore.
+- Firebase Hosting.
 
 Crear el archivo de variables de entorno a partir de la plantilla proporcionada:
 
@@ -76,6 +82,18 @@ npm run build
 
 Los archivos generados se almacenan en el directorio `dist`.
 
+## Despliegue
+
+La aplicación se encuentra desplegada mediante Firebase Hosting.
+
+Para actualizar el despliegue del proyecto original, utilizando una cuenta autorizada:
+
+```bash
+npx firebase login
+npm run build
+npx firebase deploy --only hosting --project gestion-gastos-e1c76
+```
+
 ## Validación del código
 
 ```bash
@@ -83,6 +101,8 @@ npm run lint
 ```
 
 ## Pruebas de seguridad
+
+Para ejecutar los emuladores es necesario disponer de Java 21.
 
 Iniciar los emuladores de Firebase:
 
@@ -114,6 +134,8 @@ gestion-gastos/
 │   ├── components/
 │   ├── config/
 │   ├── context/
+│   │   ├── AuthContext.js
+│   │   └── AuthProvider.jsx
 │   ├── pages/
 │   ├── App.jsx
 │   ├── index.css
@@ -121,6 +143,8 @@ gestion-gastos/
 ├── tests/
 │   └── firestore.test.js
 ├── .env.example
+├── .firebaserc
+├── .gitignore
 ├── firebase.json
 ├── firestore.rules
 ├── package.json
