@@ -1,10 +1,33 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import RutaProtegida from "./components/RutaProtegida";
+
+import Login from "./pages/Login";
+import Registro from "./pages/Registro";
+import Proyectos from "./pages/Proyectos";
+import NuevoProyecto from "./pages/NuevoProyecto";
+import DetalleProyecto from "./pages/DetalleProyecto";
+
 function App() {
   return (
-    <>
-      <h1 className="text-3xl font-bold text-blue-600">Gestión de gastos</h1>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Rutas públicas */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/registro" element={<Registro />} />
 
-      <button className="btn btn-primary">Crear proyecto</button>
-    </>
+          {/* Rutas protegidas */}
+          <Route element={<RutaProtegida />}>
+            <Route path="/" element={<Proyectos />} />
+
+            <Route path="/proyectos/nuevo" element={<NuevoProyecto />} />
+
+            <Route path="/proyectos/:id" element={<DetalleProyecto />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
