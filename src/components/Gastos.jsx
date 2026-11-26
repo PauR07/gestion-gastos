@@ -28,6 +28,7 @@ function Gastos({ proyectoId }) {
 
   useEffect(() => {
     const referencia = collection(db, "proyectos", proyectoId, "participantes");
+    let primeraCarga = true;
 
     return onSnapshot(
       referencia,
@@ -38,7 +39,16 @@ function Gastos({ proyectoId }) {
         }));
 
         setParticipantes(lista);
-        setRepartidoEntre(lista.map((p) => p.id));
+
+        if (primeraCarga) {
+          setRepartidoEntre(lista.map((p) => p.id));
+          primeraCarga = false;
+        } else {
+          setRepartidoEntre((seleccionados) =>
+            seleccionados.filter((id) => lista.some((p) => p.id === id)),
+          );
+        }
+
         setCargando(false);
       },
       () => {
@@ -67,11 +77,17 @@ function Gastos({ proyectoId }) {
   }, [proyectoId]);
 
   function cambiarSeleccion(id) {
-    setRepartidoEntre((seleccionados) =>
-      seleccionados.includes(id)
-        ? seleccionados.filter((elemento) => elemento !== id)
-        : [...seleccionados, id],
-    );
+    setRepartidoEntre((seleccionados) => {
+      if (seleccionados.includes(id)) {
+        return seleccionados.filter((elemento) => elemento !== id);
+      }
+
+      if (seleccionados.length >= 8) {
+        return seleccionados;
+      }
+
+      return [...seleccionados, id];
+    });
   }
 
   function obtenerNombre(id) {
@@ -87,17 +103,27 @@ function Gastos({ proyectoId }) {
 
     const importeCentimos = Math.round(Number(importe) * 100);
 
+    if (!concepto.trim() || concepto.trim().length > 200) {
+      setError("Introduce un concepto de entre 1 y 200 caracteres.");
+      return;
+    }
+
     if (
-      !concepto.trim() ||
       !Number.isSafeInteger(importeCentimos) ||
-      importeCentimos <= 0
+      importeCentimos <= 0 ||
+      importeCentimos > 100000000
     ) {
-      setError("Introduce un concepto y un importe válido.");
+      setError("Introduce un importe entre 0,01 € y 1.000.000 €.");
       return;
     }
 
     if (repartidoEntre.length === 0) {
       setError("Selecciona al menos un participante.");
+      return;
+    }
+
+    if (repartidoEntre.length > 8) {
+      setError("Puedes repartir un gasto entre un máximo de 8 participantes.");
       return;
     }
 
@@ -156,6 +182,7 @@ function Gastos({ proyectoId }) {
     setImporte("");
     setPagadoPor(usuario.uid);
     setRepartidoEntre(participantes.map((p) => p.id));
+    setError("");
   }
 
   async function eliminarGasto(gasto) {
@@ -186,6 +213,7 @@ function Gastos({ proyectoId }) {
           <input
             type="text"
             className="input w-full"
+            maxLength={200}
             value={concepto}
             onChange={(e) => setConcepto(e.target.value)}
             required
@@ -198,6 +226,7 @@ function Gastos({ proyectoId }) {
             type="number"
             className="input w-full"
             min="0.01"
+            max="1000000"
             step="0.01"
             value={importe}
             onChange={(e) => setImporte(e.target.value)}
@@ -224,12 +253,25 @@ function Gastos({ proyectoId }) {
         <fieldset className="flex flex-col gap-2">
           <legend className="font-bold mb-2">Repartir entre</legend>
 
+          <p className="text-sm">
+            Participantes seleccionados: {repartidoEntre.length}/8
+          </p>
+
+          {repartidoEntre.length > 8 && (
+            <div className="alert alert-warning">
+              Deselecciona participantes hasta seleccionar un máximo de 8.
+            </div>
+          )}
+
           {participantes.map((p) => (
             <label key={p.id} className="flex items-center gap-2">
               <input
                 type="checkbox"
                 className="checkbox"
                 checked={repartidoEntre.includes(p.id)}
+                disabled={
+                  !repartidoEntre.includes(p.id) && repartidoEntre.length >= 8
+                }
                 onChange={() => cambiarSeleccion(p.id)}
               />
               {p.nombre}
@@ -240,7 +282,12 @@ function Gastos({ proyectoId }) {
         <button
           type="submit"
           className="btn btn-primary"
-          disabled={guardando || cargando}
+          disabled={
+            guardando ||
+            cargando ||
+            repartidoEntre.length === 0 ||
+            repartidoEntre.length > 8
+          }
         >
           {guardando
             ? "Guardando..."

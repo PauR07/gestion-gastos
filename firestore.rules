@@ -1,0 +1,173 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function esPropietario(proyectoId) {
+      return autenticado() &&
+        get(/databases/$(database)/documents/proyectos/$(proyectoId))
+          .data.propietarioId == request.auth.uid;
+    }
+
+    function textoValido(valor, maximo) {
+      return valor is string &&
+        valor.size() > 0 &&
+        valor.size() <= maximo &&
+        valor.matches('.*\\S.*');
+    }
+
+    function proyectoValido() {
+      let datos = request.resource.data;
+
+      return datos.keys().hasAll([
+        'titulo', 'propietarioId', 'fechaCreacion'
+      ]) &&
+        datos.keys().hasOnly([
+          'titulo', 'propietarioId', 'fechaCreacion'
+        ]) &&
+        textoValido(datos.titulo, 150) &&
+        datos.propietarioId is string &&
+        datos.fechaCreacion is timestamp;
+    }
+
+    function participanteValido(participanteId) {
+      let datos = request.resource.data;
+
+      return datos.keys().hasAll([
+        'nombre', 'usuarioId'
+      ]) &&
+        datos.keys().hasOnly([
+          'nombre', 'usuarioId'
+        ]) &&
+        textoValido(datos.nombre, 100) &&
+        (
+          (
+            participanteId == request.auth.uid &&
+            datos.usuarioId == request.auth.uid
+          ) ||
+          (
+            participanteId != request.auth.uid &&
+            datos.usuarioId == null
+          )
+        );
+    }
+
+    function participanteExiste(proyectoId, participanteId) {
+      return participanteId is string &&
+        existsAfter(
+          /databases/$(database)/documents/proyectos/$(proyectoId)/participantes/$(participanteId)
+        );
+    }
+
+    function repartoValido(proyectoId, reparto) {
+      return reparto is list &&
+        reparto.size() > 0 &&
+        reparto.size() <= 8 &&
+        reparto.size() == reparto.toSet().size() &&
+        participanteExiste(proyectoId, reparto[0]) &&
+        (reparto.size() < 2 ||
+          participanteExiste(proyectoId, reparto[1])) &&
+        (reparto.size() < 3 ||
+          participanteExiste(proyectoId, reparto[2])) &&
+        (reparto.size() < 4 ||
+          participanteExiste(proyectoId, reparto[3])) &&
+        (reparto.size() < 5 ||
+          participanteExiste(proyectoId, reparto[4])) &&
+        (reparto.size() < 6 ||
+          participanteExiste(proyectoId, reparto[5])) &&
+        (reparto.size() < 7 ||
+          participanteExiste(proyectoId, reparto[6])) &&
+        (reparto.size() < 8 ||
+          participanteExiste(proyectoId, reparto[7]));
+    }
+
+    function gastoValido(proyectoId) {
+      let datos = request.resource.data;
+
+      return datos.keys().hasAll([
+        'concepto',
+        'importeCentimos',
+        'pagadoPor',
+        'repartidoEntre',
+        'fechaCreacion'
+      ]) &&
+        datos.keys().hasOnly([
+          'concepto',
+          'importeCentimos',
+          'pagadoPor',
+          'repartidoEntre',
+          'fechaCreacion'
+        ]) &&
+        textoValido(datos.concepto, 200) &&
+        datos.importeCentimos is int &&
+        datos.importeCentimos > 0 &&
+        datos.importeCentimos <= 100000000 &&
+        datos.fechaCreacion is timestamp &&
+        participanteExiste(proyectoId, datos.pagadoPor) &&
+        repartoValido(proyectoId, datos.repartidoEntre);
+    }
+
+    match /proyectos/{proyectoId} {
+
+      allow read, delete: if autenticado() &&
+        resource.data.propietarioId == request.auth.uid;
+
+      allow create: if autenticado() &&
+        proyectoValido() &&
+        request.resource.data.propietarioId == request.auth.uid &&
+        request.resource.data.fechaCreacion == request.time &&
+        existsAfter(
+          /databases/$(database)/documents/proyectos/$(proyectoId)/participantes/$(request.auth.uid)
+        );
+
+      allow update: if autenticado() &&
+        resource.data.propietarioId == request.auth.uid &&
+        proyectoValido() &&
+        request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['titulo']);
+
+      match /participantes/{participanteId} {
+
+        allow read: if esPropietario(proyectoId);
+
+        allow create: if autenticado() &&
+          getAfter(
+            /databases/$(database)/documents/proyectos/$(proyectoId)
+          ).data.propietarioId == request.auth.uid &&
+          participanteValido(participanteId);
+
+        allow update: if esPropietario(proyectoId) &&
+          participanteId != request.auth.uid &&
+          participanteValido(participanteId) &&
+          request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['nombre']);
+
+        allow delete: if esPropietario(proyectoId) &&
+          (
+            participanteId != request.auth.uid ||
+            !existsAfter(
+              /databases/$(database)/documents/proyectos/$(proyectoId)
+            )
+          );
+      }
+
+      match /gastos/{gastoId} {
+
+        allow read, delete: if esPropietario(proyectoId);
+
+        allow create: if esPropietario(proyectoId) &&
+          gastoValido(proyectoId) &&
+          request.resource.data.fechaCreacion == request.time;
+
+        allow update: if esPropietario(proyectoId) &&
+          gastoValido(proyectoId) &&
+          request.resource.data.fechaCreacion ==
+            resource.data.fechaCreacion;
+      }
+    }
+  }
+}

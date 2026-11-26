@@ -20,9 +20,14 @@ function NuevoProyecto() {
   const [cargando, setCargando] = useState(false);
 
   function agregarParticipante() {
+    setError("");
+
     const nombre = nombreParticipante.trim();
 
-    if (!nombre) return;
+    if (!nombre || nombre.length > 100) {
+      setError("Introduce un nombre de entre 1 y 100 caracteres.");
+      return;
+    }
 
     setParticipantes([
       ...participantes,
@@ -45,8 +50,31 @@ function NuevoProyecto() {
     e.preventDefault();
     setError("");
 
-    if (!titulo.trim()) {
-      setError("Introduce un título para el proyecto.");
+    const tituloValido = titulo.trim();
+    const nombrePropietario = (
+      usuario.displayName ||
+      usuario.email ||
+      ""
+    ).trim();
+
+    if (!tituloValido || tituloValido.length > 150) {
+      setError("Introduce un título de entre 1 y 150 caracteres.");
+      return;
+    }
+
+    if (!nombrePropietario || nombrePropietario.length > 100) {
+      setError(
+        "El nombre del propietario debe tener entre 1 y 100 caracteres.",
+      );
+      return;
+    }
+
+    if (
+      participantes.some(
+        (p) => !p.nombre.trim() || p.nombre.trim().length > 100,
+      )
+    ) {
+      setError("Hay participantes con nombres no válidos.");
       return;
     }
 
@@ -57,7 +85,7 @@ function NuevoProyecto() {
       const batch = writeBatch(db);
 
       batch.set(proyectoRef, {
-        titulo: titulo.trim(),
+        titulo: tituloValido,
         propietarioId: usuario.uid,
         fechaCreacion: serverTimestamp(),
       });
@@ -65,7 +93,7 @@ function NuevoProyecto() {
       const propietarioRef = doc(proyectoRef, "participantes", usuario.uid);
 
       batch.set(propietarioRef, {
-        nombre: usuario.displayName || usuario.email,
+        nombre: nombrePropietario,
         usuarioId: usuario.uid,
       });
 
@@ -106,6 +134,7 @@ function NuevoProyecto() {
             <input
               type="text"
               className="input w-full"
+              maxLength={150}
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               required
@@ -130,6 +159,7 @@ function NuevoProyecto() {
                 type="button"
                 className="btn btn-error btn-sm btn-outline"
                 onClick={() => eliminarParticipante(participante.id)}
+                disabled={cargando}
               >
                 Eliminar
               </button>
@@ -141,14 +171,17 @@ function NuevoProyecto() {
               type="text"
               className="input flex-1"
               placeholder="Nombre del participante"
+              maxLength={100}
               value={nombreParticipante}
               onChange={(e) => setNombreParticipante(e.target.value)}
+              disabled={cargando}
             />
 
             <button
               type="button"
               className="btn btn-secondary"
               onClick={agregarParticipante}
+              disabled={cargando}
             >
               Añadir
             </button>

@@ -58,14 +58,17 @@ function Proyectos() {
   function cancelarEdicion() {
     setEditandoId(null);
     setTituloEdicion("");
+    setError("");
   }
 
   async function guardarEdicion(e) {
     e.preventDefault();
     setError("");
 
-    if (!tituloEdicion.trim()) {
-      setError("El título no puede estar vacío.");
+    const tituloValido = tituloEdicion.trim();
+
+    if (!tituloValido || tituloValido.length > 150) {
+      setError("Introduce un título de entre 1 y 150 caracteres.");
       return;
     }
 
@@ -73,7 +76,7 @@ function Proyectos() {
 
     try {
       await updateDoc(doc(db, "proyectos", editandoId), {
-        titulo: tituloEdicion.trim(),
+        titulo: tituloValido,
       });
 
       cancelarEdicion();
@@ -169,8 +172,10 @@ function Proyectos() {
                   <input
                     type="text"
                     className="input w-full"
+                    maxLength={150}
                     value={tituloEdicion}
                     onChange={(e) => setTituloEdicion(e.target.value)}
+                    disabled={guardando || eliminando}
                     required
                   />
 

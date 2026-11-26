@@ -6,7 +6,7 @@ import {
   doc,
   updateDoc,
   deleteDoc,
-  getDocs,
+  getDocsFromServer,
   query,
   where,
 } from "firebase/firestore";
@@ -20,6 +20,7 @@ function Participantes({ proyectoId }) {
   const [editandoId, setEditandoId] = useState(null);
   const [nombreEdicion, setNombreEdicion] = useState("");
   const [eliminando, setEliminando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     const referencia = collection(db, "proyectos", proyectoId, "participantes");
@@ -47,17 +48,26 @@ function Participantes({ proyectoId }) {
     e.preventDefault();
     setError("");
 
-    if (!nombre.trim()) return;
+    const nombreValido = nombre.trim();
+
+    if (!nombreValido || nombreValido.length > 100) {
+      setError("Introduce un nombre de entre 1 y 100 caracteres.");
+      return;
+    }
+
+    setGuardando(true);
 
     try {
       await addDoc(collection(db, "proyectos", proyectoId, "participantes"), {
-        nombre: nombre.trim(),
+        nombre: nombreValido,
         usuarioId: null,
       });
 
       setNombre("");
     } catch {
       setError("No se ha podido añadir el participante.");
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -70,25 +80,35 @@ function Participantes({ proyectoId }) {
   async function guardarEdicion() {
     setError("");
 
-    if (!nombreEdicion.trim()) return;
+    const nombreValido = nombreEdicion.trim();
+
+    if (!nombreValido || nombreValido.length > 100) {
+      setError("Introduce un nombre de entre 1 y 100 caracteres.");
+      return;
+    }
+
+    setGuardando(true);
 
     try {
       await updateDoc(
         doc(db, "proyectos", proyectoId, "participantes", editandoId),
         {
-          nombre: nombreEdicion.trim(),
+          nombre: nombreValido,
         },
       );
 
       cancelarEdicion();
     } catch {
       setError("No se ha podido modificar el participante.");
+    } finally {
+      setGuardando(false);
     }
   }
 
   function cancelarEdicion() {
     setEditandoId(null);
     setNombreEdicion("");
+    setError("");
   }
 
   async function eliminarParticipante(participante) {
@@ -96,6 +116,10 @@ function Participantes({ proyectoId }) {
 
     if (participante.usuarioId) {
       setError("No se puede eliminar al propietario.");
+      return;
+    }
+
+    if (!window.confirm(`¿Quieres eliminar a ${participante.nombre}?`)) {
       return;
     }
 
@@ -109,11 +133,11 @@ function Participantes({ proyectoId }) {
         "gastos",
       );
 
-      const gastosPagados = await getDocs(
+      const gastosPagados = await getDocsFromServer(
         query(referenciaGastos, where("pagadoPor", "==", participante.id)),
       );
 
-      const gastosRepartidos = await getDocs(
+      const gastosRepartidos = await getDocsFromServer(
         query(
           referenciaGastos,
           where("repartidoEntre", "array-contains", participante.id),
@@ -124,10 +148,6 @@ function Participantes({ proyectoId }) {
         setError(
           "No se puede eliminar este participante porque tiene gastos asociados.",
         );
-        return;
-      }
-
-      if (!window.confirm(`¿Quieres eliminar a ${participante.nombre}?`)) {
         return;
       }
 
@@ -161,13 +181,16 @@ function Participantes({ proyectoId }) {
               <input
                 type="text"
                 className="input flex-1"
+                maxLength={100}
                 value={nombreEdicion}
                 onChange={(e) => setNombreEdicion(e.target.value)}
+                disabled={guardando || eliminando}
               />
 
               <button
                 className="btn btn-success btn-sm"
                 onClick={guardarEdicion}
+                disabled={guardando || eliminando}
               >
                 Guardar
               </button>
@@ -175,6 +198,7 @@ function Participantes({ proyectoId }) {
               <button
                 className="btn btn-ghost btn-sm"
                 onClick={cancelarEdicion}
+                disabled={guardando || eliminando}
               >
                 Cancelar
               </button>
@@ -190,6 +214,7 @@ function Participantes({ proyectoId }) {
                   <button
                     className="btn btn-outline btn-sm"
                     onClick={() => editarParticipante(participante)}
+                    disabled={guardando || eliminando}
                   >
                     Editar
                   </button>
@@ -197,7 +222,7 @@ function Participantes({ proyectoId }) {
                   <button
                     className="btn btn-error btn-outline btn-sm"
                     onClick={() => eliminarParticipante(participante)}
-                    disabled={eliminando}
+                    disabled={guardando || eliminando}
                   >
                     Eliminar
                   </button>
@@ -216,12 +241,18 @@ function Participantes({ proyectoId }) {
           type="text"
           className="input flex-1"
           placeholder="Nombre del participante"
+          maxLength={100}
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
+          disabled={guardando || eliminando}
           required
         />
 
-        <button type="submit" className="btn btn-primary">
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={guardando || eliminando || cargando}
+        >
           Añadir participante
         </button>
       </form>
